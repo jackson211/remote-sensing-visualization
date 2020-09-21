@@ -16,13 +16,29 @@ from bokeh.plotting import figure
 
 nodata = 1
 
-css = '''
-.title {
-    font-family: Helvetica,
-    font-weight: bold,
-    color: black
+# css = '''
+# div.title-txt {
+#     font-family: 'Helvetica', sans-serif,
+#     font-weight: bold,
+#     color: white
+# }
+# '''
+
+# pn.extension(raw_css=[css])
+
+
+css = """
+div.special_table + table * {
+  border: 1px solid red;
 }
-'''
+
+div.title-txt{
+    font-family: 'Helvetica', sans-serif;
+    font-weight: bold;
+    background-color: black;
+    color: white;
+}
+"""
 
 pn.extension(raw_css=[css])
 
@@ -59,10 +75,20 @@ def main(path):
     p1 = figure(width=300, height=300)
     p1.line([1, 2, 3], [1, 2, 3])
 
+    p2 = pn.panel("""
+    <div class="special_table"></div>
+
+    | Syntax | Description |
+    | ----------- | ----------- |
+    | Header | Title |
+    | Paragraph | Text |
+
+    """)
+
     # Build panel
     tabs = pn.Tabs(("Raster Image Channels", layout))
     tabs.extend([('Some', p1),
-                 ('Random', pn.widgets.TextInput()),
+                 ('Random', p2),
                  ('Shit', pn.widgets.ColorPicker())
                  ])
 
@@ -71,8 +97,11 @@ def main(path):
                         max_width=600, height=100)
 
     gspec[0, 0] = pn.Spacer(margin=0)
-    gspec[0, 1:6] = pn.Row('# Remote Sensing Image Viewer',
-                           margin=(0, 0, 10, 0), css_classes=['title'])
+    gspec[0, 1:6] = pn.panel(""" 
+                                <div class="title-txt"></div>
+                                # Remote Sensing Image Viewer
+                            """
+                             )
     gspec[0, 6] = pn.Spacer(margin=0)
     gspec[1, 1:6] = tabs
     # print(gspec.grid)
