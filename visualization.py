@@ -53,24 +53,27 @@ def combine_bands(band):
     return hv.RGB((xs, ys[::-1], r, g, b, a), vdims=list('RGBA'))
 
 
+def tap_func(x, y):
+    print(x, y)
+    return hv.Points([x, y])
+
+
 def main(path):
     band = read_tiff(path)
 
-    # tooltips = [
-    #     ('Longitude', '@x'),
-    #     ('Latitude', '@y'),
-    # ]
-
-    # hover = HoverTool(tooltips=tooltips)
     # Combing images
-    layout = regrid(combine_bands(
-        band) + one_band(band[0]) + one_band(band[1])+one_band(band[2])).redim(x='Longitude', y='Latitude')
-    layout.opts(
-        opts.RGB(width=600, height=468, framewise=True,  tools=['hover', 'tap'])).cols(2)
+    combined = combine_bands(band)
+    r = one_band(band[0])
+    g = one_band(band[1])
+    b = one_band(band[2])
 
-    # Figure
-    p1 = figure(width=300, height=300)
-    p1.line([1, 2, 3], [1, 2, 3])
+    posxy = hv.streams.Tap(source=combined, x=119.9, y=38.8)
+    tap_combined = hv.DynamicMap(tap_func, streams=[posxy])
+
+    layout = regrid(combined + r + g +
+                    b).redim(x='Longitude', y='Latitude')
+    layout.opts(
+        opts.RGB(width=600, height=468, framewise=True, bgcolor='black', tools=['hover', 'tap'])).cols(2)
 
     # p2 = pn.panel("""
     # <div class="special_table"></div>
@@ -82,15 +85,14 @@ def main(path):
 
     # """)
 
-    cols = pn.Column()
-
     title = pn.panel("""
                                  <div class="title-txt"></div>
                                  # Remote Sensing Image Viewer
                      """)
+    cols = pn.Column()
     cols.append(title)
     cols.append(layout)
-    cols.append(p1)
+    cols.append(tap_combined)
 
     # Grid layout
     # gspec = pn.GridSpec(sizing_mode='stretch_width', max_width=600)
