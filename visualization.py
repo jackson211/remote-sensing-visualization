@@ -40,37 +40,32 @@ def combine_bands(band):
     return hv.RGB((xs, ys[::-1], r, g, b, a), vdims=list('RGBA'))
 
 
-def tap_callback(x, y):
-    print(x, y)
-    return hv.Points([x, y])
+def image_tap(img, data, wavelength):
+    def tap_callback(x, y):
+        spectral_curve = data[:, int(y), int(x)]
+        adj_wave = [(w, s) for s, w in zip(spectral_curve, wavelength)]
+        return hv.Curve(adj_wave).opts(title="Spectral Curve", width=500, height=400, tools=['hover'])
+    posxy = hv.streams.Tap(source=img, x=1100.9, y=300.8)
+    tap_combined = hv.DynamicMap(tap_callback, streams=[posxy])
+    return tap_combined
 
 
-def main(tiff_path, img_path, hdr_path):
-    band_num, geodata, raw = es.load_data(img_path, gdal_driver='GTiff')
+def main(tiff_path, npy_path, hdr_path):
+    data = np.load(npy_path)
     hdr = es.read_envi_header(hdr_path)
-
-    # xs = np.arange(raw.RasterXSize)
-    # ys = np.arange(raw.RasterYSize)
-
-    # r = es.read_img_array(raw, 10)
-    # g = es.read_img_array(raw, 50)
-    # b = es.read_img_array(raw, 80)
+    wavelength = [float(i) for i in hdr['wavelength']]
 
     tiff = read_tiff(tiff_path)
+    tiff = (tiff/256).astype(np.uint8)
 
     # Combing images
     combined = combine_bands(tiff)
-    r = one_band(tiff[0])
-    g = one_band(tiff[1])
-    b = one_band(tiff[2])
+    layout = regrid(combined).redim(x='X', y='Y')
+    layout.opts(opts.RGB(width=600, height=468, framewise=True,
+                         bgcolor='black', tools=['hover', 'tap']))
 
-    posxy = hv.streams.Tap(source=combined, x=120.9, y=31.8)
-    tap_combined = hv.DynamicMap(tap_callback, streams=[posxy])
-
-    layout = regrid(combined + r + g +
-                    b).redim(x='Longitude', y='Latitude')
-    layout.opts(
-        opts.RGB(width=600, height=468, framewise=True, bgcolor='black', tools=['hover', 'tap'])).cols(2)
+    tap_combined = image_tap(combined, data, wavelength).redim(
+        x='Wavelength', y='Value')
 
     title = pn.panel("""
                                  <div class="title-txt"></div>
@@ -91,6 +86,6 @@ if __name__ == "__main__":
     file_name = "20160212_003501_700591"
     tiff_path = os.path.join(data_dir, "rgb20160212_003501_700591.tif")
     hdr_path = os.path.join(data_dir, "h"+file_name+".hdr")
-    img_path = os.path.join(data_dir, "h"+file_name+".img")
+    npy_path = os.path.join(data_dir, "h"+file_name+".npy")
 
-    main(tiff_path, img_path, hdr_path)
+    main(tiff_path, npy_path, hdr_path)

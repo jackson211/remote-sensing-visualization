@@ -45,7 +45,7 @@ def load_data(file_name, gdal_driver='GTiff'):
     # Get the data as a numpy array
     band_num = inDs.RasterCount
 
-    return (band_num, geotransform, inDs)
+    return (band_num, geotransform, inDs.ReadAsArray())
 
 
 def read_img_array(inDs, band_id):
@@ -109,7 +109,6 @@ def read_envi_header(file):
     return dict
 
 
-# Usage
 # data_dir = "/Users/jackson/Documents/code/bokeh/data"
 # file_name = "h20160212_003501_700591"
 # hdr_data = os.path.join(data_dir, file_name+".hdr")
@@ -120,4 +119,4 @@ def read_envi_header(file):
 # hdr = read_envi_header(hdr_data)
 
 # print(band_num, geodata)
-# print(hdr)
+# print([float(i) for i in hdr['wavelength']])
