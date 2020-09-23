@@ -76,8 +76,6 @@ def read_envi_header(file):
     f.close()
 
     dict = {}
-    have_nonlowercase_param = False
-
     while lines:
         line = lines.pop(0)
         if line.find('=') == -1:
@@ -112,14 +110,14 @@ def read_envi_header(file):
 
 
 # Usage
-data_dir = "/Users/jackson/Documents/code/bokeh/data"
-file_name = "h20160212_003501_700591"
-hdr_data = os.path.join(data_dir, file_name+".hdr")
-img_data = os.path.join(data_dir, file_name+".img")
+# data_dir = "/Users/jackson/Documents/code/bokeh/data"
+# file_name = "h20160212_003501_700591"
+# hdr_data = os.path.join(data_dir, file_name+".hdr")
+# img_data = os.path.join(data_dir, file_name+".img")
 
-band_num, geodata, raw = load_data(img_data, gdal_driver='GTiff')
-img = read_img_array(raw, 80)
-hdr = read_envi_header(hdr_data)
+# band_num, geodata, raw = load_data(img_data, gdal_driver='GTiff')
+# img = read_img_array(raw, 80)
+# hdr = read_envi_header(hdr_data)
 
-print(band_num, geodata)
-print(hdr)
+# print(band_num, geodata)
+# print(hdr)

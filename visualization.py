@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+import os
 import numpy as np
 import xarray as xr
 import datashader as ds
@@ -14,24 +16,9 @@ from bokeh.resources import CDN
 from bokeh.embed import file_html
 from bokeh.plotting import figure
 
+import envi_reader as es
 
 nodata = 1
-
-
-css = """
-div.special_table + table * {
-  border: 1px solid red;
-}
-
-div.title-txt{
-    font-family: 'Helvetica', sans-serif;
-    font-weight: bold;
-    background-color: black;
-    color: white;
-}
-"""
-
-pn.extension(raw_css=[css])
 
 
 def read_tiff(path):
@@ -53,37 +40,37 @@ def combine_bands(band):
     return hv.RGB((xs, ys[::-1], r, g, b, a), vdims=list('RGBA'))
 
 
-def tap_func(x, y):
+def tap_callback(x, y):
     print(x, y)
     return hv.Points([x, y])
 
 
-def main(path):
-    band = read_tiff(path)
+def main(tiff_path, img_path, hdr_path):
+    band_num, geodata, raw = es.load_data(img_path, gdal_driver='GTiff')
+    hdr = es.read_envi_header(hdr_path)
+
+    # xs = np.arange(raw.RasterXSize)
+    # ys = np.arange(raw.RasterYSize)
+
+    # r = es.read_img_array(raw, 10)
+    # g = es.read_img_array(raw, 50)
+    # b = es.read_img_array(raw, 80)
+
+    tiff = read_tiff(tiff_path)
 
     # Combing images
-    combined = combine_bands(band)
-    r = one_band(band[0])
-    g = one_band(band[1])
-    b = one_band(band[2])
+    combined = combine_bands(tiff)
+    r = one_band(tiff[0])
+    g = one_band(tiff[1])
+    b = one_band(tiff[2])
 
-    posxy = hv.streams.Tap(source=combined, x=119.9, y=38.8)
-    tap_combined = hv.DynamicMap(tap_func, streams=[posxy])
+    posxy = hv.streams.Tap(source=combined, x=120.9, y=31.8)
+    tap_combined = hv.DynamicMap(tap_callback, streams=[posxy])
 
     layout = regrid(combined + r + g +
                     b).redim(x='Longitude', y='Latitude')
     layout.opts(
         opts.RGB(width=600, height=468, framewise=True, bgcolor='black', tools=['hover', 'tap'])).cols(2)
-
-    # p2 = pn.panel("""
-    # <div class="special_table"></div>
-
-    # | Syntax | Description |
-    # | ----------- | ----------- |
-    # | Header | Title |
-    # | Paragraph | Text |
-
-    # """)
 
     title = pn.panel("""
                                  <div class="title-txt"></div>
@@ -93,24 +80,17 @@ def main(path):
     cols.append(title)
     cols.append(layout)
     cols.append(tap_combined)
-
-    # Grid layout
-    # gspec = pn.GridSpec(sizing_mode='stretch_width', max_width=600)
-
-    # gspec[0, 0] = pn.Spacer(margin=0)
-    # gspec[0, 1:6] = pn.panel("""
-    #                             <div class="title-txt"></div>
-    #                             # Remote Sensing Image Viewer
-    #                         """
-    #                          )
-    # gspec[0, 6] = pn.Spacer(margin=0)
-    # gspec[1, 1:6] = layout
-    # gspec[3:, 1:6] = p1
-
-    # print(gspec.grid)
     cols.show(title='Remote Sensing')
 
 
 if __name__ == "__main__":
-    file_path = '/Users/jackson/Documents/code/bokeh/data/rgb20200810_093400_372485_geotiff.tif'
-    main(file_path)
+    # tiff_path = '/Users/jackson/Documents/code/bokeh/data/rgb20200810_093400_372485_geotiff.tif'
+    # main(file_path)
+
+    data_dir = "/Users/jackson/Documents/code/bokeh/data"
+    file_name = "20160212_003501_700591"
+    tiff_path = os.path.join(data_dir, "rgb20160212_003501_700591.tif")
+    hdr_path = os.path.join(data_dir, "h"+file_name+".hdr")
+    img_path = os.path.join(data_dir, "h"+file_name+".img")
+
+    main(tiff_path, img_path, hdr_path)
