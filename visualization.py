@@ -30,22 +30,28 @@ def one_band(b):
     b = ds.utils.orient_array(b)
     a = (np.where(np.logical_or(np.isnan(b), b <= nodata), 0, 255)).astype(np.uint8)
     col, rows = b.shape
-    return hv.RGB((xs, ys[::-1], b, b, b, a), vdims=list('RGBA'))
+    return hv.RGB((xs, ys[::-1], b, b, b, a), kdims=['X', 'Y'], vdims=list('RGBA'))
 
 
 def combine_bands(band):
     xs, ys = band['x'], band['y']
     r, g, b = [ds.utils.orient_array(img) for img in band]
     a = (np.where(np.logical_or(np.isnan(r), r <= nodata), 0, 255)).astype(np.uint8)
-    return hv.RGB((xs, ys[::-1], r, g, b, a), vdims=list('RGBA'))
+    return hv.RGB((xs, ys[::-1], r, g, b, a), kdims=['X', 'Y'], vdims=list('RGBA'))
 
 
 def image_tap(img, data, wavelength):
+
     def tap_callback(x, y):
-        spectral_curve = data[:, int(y), int(x)]
+        x = int(x)
+        y = int(y)
+        spectral_curve = data[:, y, x]
         adj_wave = [(w, s) for s, w in zip(spectral_curve, wavelength)]
-        return hv.Curve(adj_wave).opts(title="Spectral Curve", width=500, height=400, tools=['hover'])
-    posxy = hv.streams.Tap(source=img, x=1100.9, y=300.8)
+        return hv.Curve(adj_wave).opts(title="Spectral Curve at X:" + str(x) + " Y:" + str(y), width=800, height=500, tools=['hover'])
+
+    height = data.shape[1]
+    width = data.shape[2]
+    posxy = hv.streams.Tap(source=img, x=width/2, y=height/2)
     tap_combined = hv.DynamicMap(tap_callback, streams=[posxy])
     return tap_combined
 
@@ -60,12 +66,12 @@ def main(tiff_path, npy_path, hdr_path):
 
     # Combing images
     combined = combine_bands(tiff)
-    layout = regrid(combined).redim(x='X', y='Y')
-    layout.opts(opts.RGB(width=600, height=468, framewise=True,
+    layout = regrid(combined)  # .redim(x='X', y='Y')
+    layout.opts(opts.RGB(width=800, height=624, framewise=True,
                          bgcolor='black', tools=['hover', 'tap']))
 
     tap_combined = image_tap(combined, data, wavelength).redim(
-        x='Wavelength', y='Value')
+        x='Wavelength(nm)', y='Value')
 
     title = pn.panel("""
                                  <div class="title-txt"></div>
