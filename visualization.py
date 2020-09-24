@@ -71,7 +71,7 @@ def main(tiff_path, npy_path, hdr_path):
                          bgcolor='black', tools=['hover', 'tap']))
 
     tap_combined = image_tap(combined, data, wavelength).redim(
-        x='Wavelength(nm)', y='Value')
+        x='Wavelength(nm)', y='DN Value')
 
     title = pn.panel("""
                                  <div class="title-txt"></div>
@@ -85,9 +85,6 @@ def main(tiff_path, npy_path, hdr_path):
 
 
 if __name__ == "__main__":
-    # tiff_path = '/Users/jackson/Documents/code/bokeh/data/rgb20200810_093400_372485_geotiff.tif'
-    # main(file_path)
-
     data_dir = "/Users/jackson/Documents/code/bokeh/data"
     file_name = "20160212_003501_700591"
     tiff_path = os.path.join(data_dir, "rgb20160212_003501_700591.tif")
