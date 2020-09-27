@@ -11,7 +11,7 @@ import holoviews as hv
 from holoviews import opts
 from holoviews.operation.datashader import regrid, shade
 from bokeh.io import output_file, save, show
-from bokeh.models import HoverTool
+from bokeh.models import HoverTool, CrosshairTool
 from bokeh.resources import CDN
 from bokeh.embed import file_html
 from bokeh.plotting import figure
@@ -19,6 +19,9 @@ from bokeh.plotting import figure
 import envi_reader as es
 
 nodata = 1
+
+crosshair = CrosshairTool(
+    dimensions="both", line_width=3, line_color="#66FF99", line_alpha=0.5)
 
 
 def read_tiff(path):
@@ -68,7 +71,7 @@ def main(tiff_path, npy_path, hdr_path):
     combined = combine_bands(tiff)
     layout = regrid(combined)  # .redim(x='X', y='Y')
     layout.opts(opts.RGB(width=800, height=624, framewise=True,
-                         bgcolor='black', tools=['hover', 'tap']))
+                         bgcolor='black', tools=['hover', 'tap', crosshair]))
 
     tap_combined = image_tap(combined, data, wavelength).redim(
         x='Wavelength(nm)', y='DN Value')
