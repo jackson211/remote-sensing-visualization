@@ -12,7 +12,7 @@ class FileNotAnEnviHeader(Exception):
         super(FileNotAnEnviHeader, self).__init__(msg)
 
 
-def load_data(file_name, gdal_driver='GTiff'):
+def load_raw(file_name, gdal_driver='GTiff'):
     '''
     Converts a GDAL compatable file into a numpy array and associated geodata.
     The rray is provided so you can run with your processing - the geodata consists of the geotransform and gdal dataset object
@@ -114,7 +114,7 @@ def read_envi_header(file):
 # hdr_data = os.path.join(data_dir, file_name+".hdr")
 # img_data = os.path.join(data_dir, file_name+".img")
 
-# band_num, geodata, raw = load_data(img_data, gdal_driver='GTiff')
+# band_num, geodata, raw = load_raw(img_data, gdal_driver='GTiff')
 # img = read_img_array(raw, 80)
 # hdr = read_envi_header(hdr_data)
 
