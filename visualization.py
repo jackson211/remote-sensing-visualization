@@ -62,8 +62,8 @@ def image_tap(img, data, wavelength):
         spikes = hv.Spikes(adj_wave)
         layout = curve + spikes
         layout.opts(opts.Curve(title="Spectral Curve at X:" + str(x) +
-                               " Y:" + str(y), xaxis=None, height=500, width=800, tools=['hover', crosshair]),
-                    opts.Spikes(height=150, width=800, yaxis=None, line_width=0.5, color='grey')).cols(1)
+                               " Y:" + str(y), xaxis=None, height=500, width=600, tools=['hover', crosshair]),
+                    opts.Spikes(height=150, width=600, yaxis=None, line_width=0.5, color='grey')).cols(1)
         return layout
 
     height = data.shape[1]
@@ -73,13 +73,13 @@ def image_tap(img, data, wavelength):
     return tap_combined
 
 
-def main(data, hdr, tiff):
+def main(file_name, data, hdr, tiff):
     wavelength = [float(i) for i in hdr['wavelength']]
 
     # Combing images
     combined = combine_bands(tiff)
     layout = regrid(combined)
-    layout.opts(opts.RGB(width=800, height=624, framewise=True,
+    layout.opts(opts.RGB(title=f"Data: {file_name}", width=800, height=624, framewise=True,
                          bgcolor='black', tools=['hover', 'tap', crosshair]))
 
     tap_combined = image_tap(combined, data, wavelength).redim(
@@ -89,8 +89,9 @@ def main(data, hdr, tiff):
 
     container = pn.Column(sizing_mode='stretch_both')
     container.append(title)
-    container.append(layout)
-    container.append(tap_combined)
+    row = pn.Row(layout, tap_combined)
+    container.append(row)
+    # container.append(tap_combined)
     container.show(title='Remote Sensing')
 
 
@@ -106,4 +107,4 @@ if __name__ == "__main__":
     tiff = read_tiff(tiff_path)
     tiff = (tiff/256).astype(np.uint8)  # for 16bit TIFF
 
-    main(data, hdr, tiff)
+    main(file_name, data, hdr, tiff)
