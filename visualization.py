@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import os
+import re
+import argparse
 import numpy as np
 import xarray as xr
 import datashader as ds
@@ -93,15 +95,31 @@ def main(file_name, data, hdr, tiff):
     container.append(row)
     # container.append(tap_combined)
     container.show(title='Remote Sensing')
+    # pn.panel(container).servable(title='Remote Sensing')
 
 
 if __name__ == "__main__":
-    data_dir = "/Users/jackson/Documents/code/bokeh/data"
-    file_name = "20160212_003501_700591"
-    tiff_path = os.path.join(data_dir, "rgb20160212_003501_700591.tif")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i",
+                        "--input",
+                        type=str,
+                        required=True,
+                        help="Input tiff image")
+    args = parser.parse_args()
+    input_dir = args.input
+
+    # Parse file path
+    data_dir = os.path.dirname(input_dir)
+    file_name = os.path.basename(input_dir).split('.')[0]
+    if file_name[:1].isalpha():
+        file_name = re.sub(r'^[a-zA-Z]*', '', file_name)
+
+    tiff_path = os.path.join(data_dir, "rgb"+file_name+".tif")
     hdr_path = os.path.join(data_dir, "h"+file_name+".hdr")
     npy_path = os.path.join(data_dir, "h"+file_name+".npy")
+    print(f"Reading file from {tiff_path}, {hdr_path}, {npy_path}")
 
+    # Loading data
     data = np.load(npy_path)
     hdr = es.read_envi_header(hdr_path)
     tiff = read_tiff(tiff_path)
