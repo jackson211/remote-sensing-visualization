@@ -23,17 +23,8 @@ import envi_reader as es
 hv.extension('bokeh', logo=False)
 
 nodata = 1
-
 crosshair = CrosshairTool(
     dimensions="both", line_width=3, line_color="#66FF99", line_alpha=0.8)
-
-# css = '''
-# .title {
-# font: 1.2em "helvetica", sans-serif;
-# }
-# '''
-
-# pn.extension(raw_css=[css])
 
 
 def read_tiff(path):
@@ -56,15 +47,19 @@ def combine_bands(band):
 
 
 def image_tap(img, data, wavelength):
+    default_x = data.shape[2]/2
+    default_y = data.shape[1]/2
+    posxy = hv.streams.Tap(source=img, x=default_x, y=default_y)
+    curve_dict = {}
 
     def tap_callback(x, y):
+        x = int(x)
+        y = int(y)
         spectral_curve = data[:, int(y), int(x)]
         adj_wave = [(w, s) for w, s in zip(wavelength, spectral_curve)]
-        return hv.Curve(adj_wave)
-
-    height = data.shape[1]
-    width = data.shape[2]
-    posxy = hv.streams.Tap(source=img, x=width/2, y=height/2)
+        curve = hv.Curve(adj_wave)
+        curve_dict[(x, y)] = curve
+        return hv.NdOverlay(curve_dict, kdims=['x', 'y'])
 
     dmap = hv.DynamicMap(tap_callback, streams=[posxy])
     spikes = hv.Spikes(wavelength)
