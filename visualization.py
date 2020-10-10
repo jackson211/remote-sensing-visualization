@@ -20,6 +20,8 @@ from bokeh.plotting import figure
 
 import envi_reader as es
 
+hv.extension('bokeh', logo=False)
+
 nodata = 1
 
 crosshair = CrosshairTool(
@@ -66,13 +68,9 @@ def image_tap(img, data, wavelength):
 
     dmap = hv.DynamicMap(tap_callback, streams=[posxy])
     spikes = hv.Spikes(wavelength)
-    if dmap.last is not None:
-        layout = dmap * dmap.last + spikes
-    else:
-        layout = dmap + spikes
+    layout = dmap + spikes
     layout.opts(opts.Curve(title="Spectral Curve", xaxis=None, height=500, width=600, tools=[
                 'hover', crosshair]), opts.Spikes(height=150, width=600, yaxis=None, line_width=0.5, color='grey')).cols(1)
-    print(dmap.last)
     return layout
 
 
@@ -90,11 +88,9 @@ def display(file_name, data, hdr, tiff):
     title = pn.Row(pn.pane.Markdown("#Remote Sensing Image Viewer", style={'font-family': 'helvetica'},
                                     width_policy='max', height=50, sizing_mode='stretch_width', css_classes=['title']))
 
-    container = pn.Column(sizing_mode='stretch_both')
-    container.append(title)
-    row = pn.Row(layout, tap_combined)
-    container.append(row)
-    container.show(title='Remote Sensing')
+    container = pn.Column(title, pn.Row(
+        layout, tap_combined), sizing_mode='stretch_both')
+    return container
 
 
 def path_parser(input_dir):
@@ -120,17 +116,20 @@ def load_data(tiff_path, hdr_path, npy_path, bit_16=True):
     return (data, hdr, tiff)
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-i",
-                        "--input",
-                        type=str,
-                        required=True,
-                        help="Input tiff image")
-    args = parser.parse_args()
-    input_dir = args.input
+# if __name__ == "__main__":
+# parser = argparse.ArgumentParser()
+# parser.add_argument("-i",
+#                     "--input",
+#                     type=str,
+#                     required=True,
+#                     help="Input tiff image")
+# args = parser.parse_args()
+# input_dir = args.input
 
-    file_name, tiff_path, hdr_path, npy_path = path_parser(input_dir)
-    data, hdr, tiff = load_data(tiff_path, hdr_path, npy_path)
+input_dir = "../data/rgb20160212_003501_700591.tif"
 
-    display(file_name, data, hdr, tiff)
+file_name, tiff_path, hdr_path, npy_path = path_parser(input_dir)
+data, hdr, tiff = load_data(tiff_path, hdr_path, npy_path)
+
+app = display(file_name, data, hdr, tiff)
+app.servable(title='Remote Sensing')
