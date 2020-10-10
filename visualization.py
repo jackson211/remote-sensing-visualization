@@ -56,26 +56,27 @@ def combine_bands(band):
 def image_tap(img, data, wavelength):
 
     def tap_callback(x, y):
-        x = int(x)
-        y = int(y)
-        spectral_curve = data[:, y, x]
-        adj_wave = [(w, s) for s, w in zip(spectral_curve, wavelength)]
-        curve = hv.Curve(adj_wave)
-        spikes = hv.Spikes(adj_wave)
-        layout = curve + spikes
-        layout.opts(opts.Curve(title="Spectral Curve at X:" + str(x) +
-                               " Y:" + str(y), xaxis=None, height=500, width=600, tools=['hover', crosshair]),
-                    opts.Spikes(height=150, width=600, yaxis=None, line_width=0.5, color='grey')).cols(1)
-        return layout
+        spectral_curve = data[:, int(y), int(x)]
+        adj_wave = [(w, s) for w, s in zip(wavelength, spectral_curve)]
+        return hv.Curve(adj_wave)
 
     height = data.shape[1]
     width = data.shape[2]
     posxy = hv.streams.Tap(source=img, x=width/2, y=height/2)
-    tap_combined = hv.DynamicMap(tap_callback, streams=[posxy])
-    return tap_combined
+
+    dmap = hv.DynamicMap(tap_callback, streams=[posxy])
+    spikes = hv.Spikes(wavelength)
+    if dmap.last is not None:
+        layout = dmap * dmap.last + spikes
+    else:
+        layout = dmap + spikes
+    layout.opts(opts.Curve(title="Spectral Curve", xaxis=None, height=500, width=600, tools=[
+                'hover', crosshair]), opts.Spikes(height=150, width=600, yaxis=None, line_width=0.5, color='grey')).cols(1)
+    print(dmap.last)
+    return layout
 
 
-def main(file_name, data, hdr, tiff):
+def display(file_name, data, hdr, tiff):
     wavelength = [float(i) for i in hdr['wavelength']]
 
     # Combing images
@@ -93,9 +94,30 @@ def main(file_name, data, hdr, tiff):
     container.append(title)
     row = pn.Row(layout, tap_combined)
     container.append(row)
-    # container.append(tap_combined)
     container.show(title='Remote Sensing')
-    # pn.panel(container).servable(title='Remote Sensing')
+
+
+def path_parser(input_dir):
+    # Parse file path
+    data_dir = os.path.dirname(input_dir)
+    file_name = os.path.basename(input_dir).split('.')[0]
+    if file_name[:1].isalpha():
+        file_name = re.sub(r'^[a-zA-Z]*', '', file_name)
+
+    tiff_path = os.path.join(data_dir, "rgb"+file_name+".tif")
+    hdr_path = os.path.join(data_dir, "h"+file_name+".hdr")
+    npy_path = os.path.join(data_dir, "h"+file_name+".npy")
+    print(f"Reading file from {tiff_path}, {hdr_path}, {npy_path}")
+    return (file_name, tiff_path, hdr_path, npy_path)
+
+
+def load_data(tiff_path, hdr_path, npy_path, bit_16=True):
+    data = np.load(npy_path)
+    hdr = es.read_envi_header(hdr_path)
+    tiff = read_tiff(tiff_path)
+    if bit_16:
+        tiff = (tiff/256).astype(np.uint8)  # for 16bit TIFF
+    return (data, hdr, tiff)
 
 
 if __name__ == "__main__":
@@ -108,21 +130,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     input_dir = args.input
 
-    # Parse file path
-    data_dir = os.path.dirname(input_dir)
-    file_name = os.path.basename(input_dir).split('.')[0]
-    if file_name[:1].isalpha():
-        file_name = re.sub(r'^[a-zA-Z]*', '', file_name)
+    file_name, tiff_path, hdr_path, npy_path = path_parser(input_dir)
+    data, hdr, tiff = load_data(tiff_path, hdr_path, npy_path)
 
-    tiff_path = os.path.join(data_dir, "rgb"+file_name+".tif")
-    hdr_path = os.path.join(data_dir, "h"+file_name+".hdr")
-    npy_path = os.path.join(data_dir, "h"+file_name+".npy")
-    print(f"Reading file from {tiff_path}, {hdr_path}, {npy_path}")
-
-    # Loading data
-    data = np.load(npy_path)
-    hdr = es.read_envi_header(hdr_path)
-    tiff = read_tiff(tiff_path)
-    tiff = (tiff/256).astype(np.uint8)  # for 16bit TIFF
-
-    main(file_name, data, hdr, tiff)
+    display(file_name, data, hdr, tiff)
