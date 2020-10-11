@@ -52,21 +52,36 @@ def image_tap(img, data, wavelength):
     posxy = hv.streams.Tap(source=img, x=default_x, y=default_y)
     curve_dict = {}
 
-    def tap_callback(x, y):
-        x = int(x)
-        y = int(y)
+    def create_curve(x, y):
         spectral_curve = data[:, int(y), int(x)]
         adj_wave = [(w, s) for w, s in zip(wavelength, spectral_curve)]
         curve = hv.Curve(adj_wave)
-        curve_dict[(x, y)] = curve
+        return curve
+
+    def tap_callback(x, y):
+        x = int(x)
+        y = int(y)
+        if x == -1 and y == -1:
+            curve_dict.clear()
+            x = default_x
+            y = default_y
+        curve_dict[(x, y)] = create_curve(x, y)
         return hv.NdOverlay(curve_dict, kdims=['x', 'y'])
 
+    # Create dmap
     dmap = hv.DynamicMap(tap_callback, streams=[posxy])
     spikes = hv.Spikes(wavelength)
     layout = dmap + spikes
     layout.opts(opts.Curve(title="Spectral Curve", xaxis=None, height=500, width=600, tools=[
                 'hover', crosshair]), opts.Spikes(height=150, width=600, yaxis=None, line_width=0.5, color='grey')).cols(1)
-    return layout
+    layout.redim(x='Wavelength(nm)', y='DN Value')
+
+    # button
+    def clear(event):
+        dmap.event(x=-1, y=-1)
+    button = pn.widgets.Button(name='Clear', button_type='danger')
+    button.on_click(clear)
+    return pn.Column(button, layout)
 
 
 def display(file_name, data, hdr, tiff):
@@ -74,17 +89,16 @@ def display(file_name, data, hdr, tiff):
 
     # Combing images
     combined = combine_bands(tiff)
-    layout = regrid(combined)
-    layout.opts(opts.RGB(title=f"Data: {file_name}", width=800, height=624, framewise=True,
-                         bgcolor='black', tools=['hover', 'tap', crosshair]))
+    image_layout = regrid(combined)
+    image_layout.opts(opts.RGB(title=f"Data: {file_name}", width=800, height=624, framewise=True,
+                               bgcolor='black', tools=['hover', 'tap', crosshair]))
 
-    tap_combined = image_tap(combined, data, wavelength).redim(
-        x='Wavelength(nm)', y='DN Value')
+    tap_combined = image_tap(combined, data, wavelength)
     title = pn.Row(pn.pane.Markdown("#Remote Sensing Image Viewer", style={'font-family': 'helvetica'},
                                     width_policy='max', height=50, sizing_mode='stretch_width', css_classes=['title']))
 
     container = pn.Column(title, pn.Row(
-        layout, tap_combined), sizing_mode='stretch_both')
+        image_layout, tap_combined), sizing_mode='stretch_both')
     return container
 
 
