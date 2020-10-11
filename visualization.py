@@ -63,10 +63,10 @@ def image_tap(img, data, wavelength):
         y = int(y)
         if x == -1 and y == -1:
             curve_dict.clear()
-            x = default_x
-            y = default_y
-        curve_dict[(x, y)] = create_curve(x, y)
-        return hv.NdOverlay(curve_dict, kdims=['x', 'y'])
+            x = int(default_x)
+            y = int(default_y)
+        curve_dict[len(curve_dict)] = create_curve(x, y)
+        return hv.NdOverlay(curve_dict, kdims=['id'])
 
     # Create dmap
     dmap = hv.DynamicMap(tap_callback, streams=[posxy])
