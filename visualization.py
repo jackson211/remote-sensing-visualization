@@ -54,8 +54,8 @@ def image_tap(img, data, wavelength):
 
     def create_curve(x, y):
         spectral_curve = data[:, int(y), int(x)]
-        adj_wave = [(w, s) for w, s in zip(wavelength, spectral_curve)]
-        curve = hv.Curve(adj_wave)
+        # adj_wave = [(w, s) for w, s in zip(wavelength, spectral_curve)]
+        curve = hv.Curve((wavelength, spectral_curve))
         return curve
 
     def tap_callback(x, y):
@@ -65,16 +65,15 @@ def image_tap(img, data, wavelength):
             curve_dict.clear()
             x = int(default_x)
             y = int(default_y)
-        curve_dict[(x, y)] = create_curve(x, y)
-        return hv.NdOverlay(curve_dict, kdims=['x', 'y'])
+        curve_dict[len(curve_dict)] = create_curve(x, y)
+        return hv.NdOverlay(curve_dict, kdims=['ID'])
 
     # Create dmap
     dmap = hv.DynamicMap(tap_callback, streams=[posxy])
     spikes = hv.Spikes(wavelength)
     layout = dmap + spikes
-    layout.opts(opts.Curve(title="Spectral Curve", xaxis=None, height=380, width=600, tools=[
-                'hover', crosshair]), opts.Spikes(height=120, width=600, yaxis=None, line_width=0.5, color='grey')).cols(1)
-    layout.redim(x='Wavelength(nm)', y='DN Value')
+    layout.opts(opts.Curve(title="Spectral Curve", xaxis=None, ylabel='DN Value',  height=380, width=600, tools=[
+                'hover', crosshair]), opts.Spikes(height=120, width=600, xlabel='Wavelength(nm)', yaxis=None, line_width=0.5, color='grey')).cols(1)
 
     # button
     def clear(event):
