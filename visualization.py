@@ -53,8 +53,7 @@ def image_tap(img, data, wavelength):
     curve_dict = {}
 
     def create_curve(x, y):
-        spectral_curve = data[:, int(y), int(x)]
-        # adj_wave = [(w, s) for w, s in zip(wavelength, spectral_curve)]
+        spectral_curve = data[:, -int(y), int(x)]
         curve = hv.Curve((wavelength, spectral_curve))
         return curve
 
@@ -62,11 +61,10 @@ def image_tap(img, data, wavelength):
         x = int(x)
         y = int(y)
         if x == -1 and y == -1:
-            curve_dict.clear()
             x = int(default_x)
             y = int(default_y)
-        curve_dict[len(curve_dict)] = create_curve(x, y)
-        return hv.NdOverlay(curve_dict, kdims=['ID'])
+        curve_dict[(x, y)] = create_curve(x, y)
+        return hv.NdOverlay(curve_dict, kdims=['X', 'Y'])
 
     # Create dmap
     dmap = hv.DynamicMap(tap_callback, streams=[posxy])
@@ -77,6 +75,7 @@ def image_tap(img, data, wavelength):
 
     # button
     def clear(event):
+        curve_dict.clear()
         dmap.event(x=-1, y=-1)
     button = pn.widgets.Button(name='Clear', button_type='danger')
     button.on_click(clear)
@@ -96,8 +95,14 @@ def display(file_name, data, hdr, tiff):
     title = pn.Row(pn.pane.Markdown("#Remote Sensing Image Viewer", style={'font-family': 'helvetica'},
                                     width_policy='max', height=50, sizing_mode='stretch_width', css_classes=['title']))
 
-    container = pn.Column(title, pn.Row(
-        image_layout, tap_combined), sizing_mode='stretch_both')
+    tabs = pn.Tabs(('Spectral Curve', pn.Row(
+        image_layout, tap_combined)))
+
+    p3 = figure(width=300, height=300, name='Square')
+    p3.square([0, 1, 2, 3, 4, 5, 6], [0, 1, 2, 3, 2, 1, 0], size=10)
+    tabs.append(p3)
+
+    container = pn.Column(title, tabs, sizing_mode='stretch_both')
     return container
 
 
