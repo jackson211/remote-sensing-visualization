@@ -41,8 +41,13 @@ def one_band(b):
 
 def combine_bands(band):
     xs, ys = band['x'], band['y']
-    r, g, b = [ds.utils.orient_array(img) for img in band]
-    a = (np.where(np.logical_or(np.isnan(r), r <= nodata), 0, 255)).astype(np.uint8)
+    if len(band) == 3:
+        r, g, b = [ds.utils.orient_array(img) for img in band]
+        a = (np.where(np.logical_or(np.isnan(r), r <= nodata), 0, 255)).astype(np.uint8)
+    elif len(band) == 4:
+        r, g, b, a = [ds.utils.orient_array(img) for img in band]
+    else:
+        return None
     return hv.RGB((xs, ys[::-1], r, g, b, a), kdims=['X', 'Y'], vdims=list('RGBA'))
 
 
@@ -82,7 +87,14 @@ def image_tap(img, data, wavelength):
     return pn.Column(layout, button)
 
 
-def display(file_name, data, hdr, tiff):
+def ndvi(ndvi_file):
+    img = regrid(combine_bands(ndvi_file))
+    img.opts(opts.RGB(title=f"ndvi", width=800, height=624, framewise=True,
+                      bgcolor='black', tools=['hover', 'tap', crosshair]))
+    return img
+
+
+def display(file_name, data, hdr, tiff, ndvi_file):
     wavelength = [float(i) for i in hdr['wavelength']]
 
     # Combing images
@@ -98,9 +110,8 @@ def display(file_name, data, hdr, tiff):
     tabs = pn.Tabs(('Spectral Curve', pn.Row(
         image_layout, tap_combined)))
 
-    p3 = figure(width=300, height=300, name='Square')
-    p3.square([0, 1, 2, 3, 4, 5, 6], [0, 1, 2, 3, 2, 1, 0], size=10)
-    tabs.append(p3)
+    ndvi_img = ndvi(ndvi_file)
+    tabs.append(ndvi_img)
 
     container = pn.Column(title, tabs, sizing_mode='stretch_both')
     return container
@@ -140,9 +151,12 @@ def load_data(tiff_path, hdr_path, npy_path, bit_16=True):
 # input_dir = args.input
 
 input_dir = "../data/rgb20160212_003501_700591.tif"
+ndvi_path = "../data/ndvi.png"
+ndvi_file = read_tiff(ndvi_path)
 
 file_name, tiff_path, hdr_path, npy_path = path_parser(input_dir)
 data, hdr, tiff = load_data(tiff_path, hdr_path, npy_path)
 
-app = display(file_name, data, hdr, tiff)
+
+app = display(file_name, data, hdr, tiff, ndvi_file)
 app.servable(title='Remote Sensing')
