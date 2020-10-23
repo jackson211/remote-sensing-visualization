@@ -50,6 +50,10 @@ def combine_bands(band):
         return None
     return hv.RGB((xs, ys[::-1], r, g, b, a), kdims=['X', 'Y'], vdims=list('RGBA'))
 
+# def display_png(png_file):
+#     img = combine_bands(png_file)
+#     return img
+
 
 def image_tap(img, data, wavelength):
     default_x = data.shape[2]/2
@@ -87,31 +91,74 @@ def image_tap(img, data, wavelength):
     return pn.Column(layout, button)
 
 
-def ndvi(ndvi_file):
-    img = regrid(combine_bands(ndvi_file))
-    img.opts(opts.RGB(title=f"ndvi", width=800, height=624, framewise=True,
-                      bgcolor='black', tools=['hover', 'tap', crosshair]))
-    return img
+def cod_tap(img, cod_data):
+    default_x = cod_data.shape[1]/2
+    default_y = cod_data.shape[0]/2
+    posxy = hv.streams.Tap(source=img, x=default_x, y=default_y)
+    print(cod_data.shape)
+
+    def tap_callback(x, y):
+        if x > cod_data.shape[1] or x < 0 or y > cod_data.shape[0] or y < 0:
+            cod = [0]
+        else:
+            x = int(x)
+            y = int(y)
+            cod = cod_data[y, x]
+            print(x, y, cod)
+            if np.isnan(cod):
+                cod = [0]
+        table = hv.Table({'COD': cod}, ['COD'])
+        table.opts(height=140)
+        return table
+
+    # Create dmap
+    dmap = hv.DynamicMap(tap_callback, streams=[posxy])
+    dmap.opts(opts.Table(title="COD table"))
+    return dmap
 
 
-def display(file_name, data, hdr, tiff, ndvi_file):
+def display(file_name, data, hdr, tiff, ndvi_file, river1_file, river1_data, river2_file, river2_data, large_img):
     wavelength = [float(i) for i in hdr['wavelength']]
 
-    # Combing images
-    combined = combine_bands(tiff)
-    image_layout = regrid(combined)
-    image_layout.opts(opts.RGB(title=f"Data: {file_name}", width=800, height=624, framewise=True,
-                               bgcolor='black', tools=['hover', 'tap', crosshair]))
+    # Init tab component
+    tabs = pn.Tabs()
 
-    tap_combined = image_tap(combined, data, wavelength)
+    # Title
     title = pn.Row(pn.pane.Markdown("#Remote Sensing Image Viewer", style={'font-family': 'helvetica'},
                                     width_policy='max', height=50, sizing_mode='stretch_width', css_classes=['title']))
 
-    tabs = pn.Tabs(('Spectral Curve', pn.Row(
-        image_layout, tap_combined)))
+    # Main images
+    tiff_img = combine_bands(tiff)
+    tiff_img.opts(opts.RGB(title=f"Data: {file_name}", width=800, height=624, framewise=True,
+                           bgcolor='black', tools=['hover', 'tap', crosshair]))
+    tap_combined = image_tap(tiff_img, data, wavelength)
+    tabs.append(('Spectral Curve', pn.Row(tiff_img, tap_combined)))
 
-    ndvi_img = ndvi(ndvi_file)
-    tabs.append(ndvi_img)
+    # NDVI tab
+    ndvi_img = combine_bands(ndvi_file)
+    ndvi_img.opts(opts.RGB(title="NDVI", width=800, height=624, framewise=True,
+                           bgcolor='black', tools=['hover', 'tap', crosshair]))
+    tabs.append(('NDVI', ndvi_img))
+
+    # River 1 tab
+    river1_img = combine_bands(river1_file)
+    river1_img.opts(opts.RGB(title="River", width=800, height=654, framewise=True,
+                             bgcolor='black', tools=['hover', 'tap', crosshair]))
+    river1_cod_combined = cod_tap(river1_img, river1_data)
+    tabs.append(('River 1', pn.Row(river1_img, river1_cod_combined)))
+
+    # River 1 tab
+    river2_img = combine_bands(river2_file)
+    river2_img.opts(opts.RGB(title="River", width=800, height=654, framewise=True,
+                             bgcolor='black', tools=['hover', 'tap', crosshair]))
+    river2_cod_combined = cod_tap(river2_img, river2_data)
+    tabs.append(('River 2', pn.Row(river2_img, river2_cod_combined)))
+
+    # Large Image tab
+    large = combine_bands(large_img)
+    large.opts(opts.RGB(title=f"Very large image", width=2000, height=465, framewise=True,
+                        bgcolor='white', tools=['hover', 'tap', crosshair]))
+    tabs.append(('Large image', pn.Row(large)))
 
     container = pn.Column(title, tabs, sizing_mode='stretch_both')
     return container
@@ -140,6 +187,7 @@ def load_data(tiff_path, hdr_path, npy_path, bit_16=True):
     return (data, hdr, tiff)
 
 
+# Note: no if __name__ == "__main__": for panel server
 # if __name__ == "__main__":
 # parser = argparse.ArgumentParser()
 # parser.add_argument("-i",
@@ -150,13 +198,29 @@ def load_data(tiff_path, hdr_path, npy_path, bit_16=True):
 # args = parser.parse_args()
 # input_dir = args.input
 
-input_dir = "../data/rgb20160212_003501_700591.tif"
-ndvi_path = "../data/ndvi.png"
-ndvi_file = read_tiff(ndvi_path)
+
+input_dir = "rgb20160212_003501_700591.tif"
+ndvi_img_path = "ndvi.png"
+
+river1_img_path = "river1_cod.png"
+river1_cod_path = "river1_COD.npy"
+river2_img_path = "river2_cod.png"
+river2_cod_path = "river2_COD.npy"
+large_img_path = "croped_rgb.tif"
+
+
+ndvi_file = read_tiff(ndvi_img_path)
+river1_file = read_tiff(river1_img_path)
+river1_data = np.load(river1_cod_path)
+river2_file = read_tiff(river2_img_path)
+river2_data = np.load(river1_cod_path)
+large_img = read_tiff(large_img_path)
+
 
 file_name, tiff_path, hdr_path, npy_path = path_parser(input_dir)
 data, hdr, tiff = load_data(tiff_path, hdr_path, npy_path)
 
 
-app = display(file_name, data, hdr, tiff, ndvi_file)
+app = display(file_name, data, hdr, tiff, ndvi_file,
+              river1_file, river1_data, river2_file, river2_data, large_img)
 app.servable(title='Remote Sensing')
