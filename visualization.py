@@ -91,6 +91,32 @@ def image_tap(img, data, wavelength):
     return pn.Column(layout, button)
 
 
+def cod_tap_2(img, cod_data):
+    default_x = cod_data.shape[1]/2
+    default_y = cod_data.shape[0]/2
+    posxy = hv.streams.Tap(source=img, x=default_x, y=default_y)
+    print(cod_data.shape)
+
+    def tap_callback(x, y):
+        if x > cod_data.shape[1] or x < 0 or y > cod_data.shape[0] or y < 0:
+            cod = [0]
+        else:
+            x = int(x)
+            y = int(y)
+            cod = cod_data[y, -x]
+            print(x, y, cod)
+            if np.isnan(cod):
+                cod = [0]
+        table = hv.Table({'COD': cod}, ['COD'])
+        table.opts(height=140)
+        return table
+
+    # Create dmap
+    dmap = hv.DynamicMap(tap_callback, streams=[posxy])
+    dmap.opts(opts.Table(title="COD table"))
+    return dmap
+
+
 def cod_tap(img, cod_data):
     default_x = cod_data.shape[1]/2
     default_y = cod_data.shape[0]/2
@@ -103,7 +129,7 @@ def cod_tap(img, cod_data):
         else:
             x = int(x)
             y = int(y)
-            cod = cod_data[y, x]
+            cod = cod_data[y, -x]
             print(x, y, cod)
             if np.isnan(cod):
                 cod = [0]
@@ -142,23 +168,23 @@ def display(file_name, data, hdr, tiff, ndvi_file, river1_file, river1_data, riv
 
     # River 1 tab
     river1_img = combine_bands(river1_file)
-    river1_img.opts(opts.RGB(title="River", width=800, height=654, framewise=True,
+    river1_img.opts(opts.RGB(title="River", width=800, height=800, framewise=True,
                              bgcolor='black', tools=['hover', 'tap', crosshair]))
     river1_cod_combined = cod_tap(river1_img, river1_data)
-    tabs.append(('River 1', pn.Row(river1_img, river1_cod_combined)))
+    tabs.append(('云南 River 1', pn.Row(river1_img, river1_cod_combined)))
 
-    # River 1 tab
+    # River 2 tab
     river2_img = combine_bands(river2_file)
-    river2_img.opts(opts.RGB(title="River", width=800, height=654, framewise=True,
+    river2_img.opts(opts.RGB(title="River", width=800, height=669, framewise=True,
                              bgcolor='black', tools=['hover', 'tap', crosshair]))
-    river2_cod_combined = cod_tap(river2_img, river2_data)
-    tabs.append(('River 2', pn.Row(river2_img, river2_cod_combined)))
+    river2_cod_combined = cod_tap_2(river2_img, river2_data)
+    tabs.append(('云南 River 2', pn.Row(river2_img, river2_cod_combined)))
 
     # Large Image tab
     large = combine_bands(large_img)
-    large.opts(opts.RGB(title=f"Very large image", width=2000, height=465, framewise=True,
+    large.opts(opts.RGB(title="南通", width=900, height=600, framewise=True,
                         bgcolor='white', tools=['hover', 'tap', crosshair]))
-    tabs.append(('Large image', pn.Row(large)))
+    tabs.append(('南通', pn.Row(large)))
 
     container = pn.Column(title, tabs, sizing_mode='stretch_both')
     return container
@@ -199,14 +225,14 @@ def load_data(tiff_path, hdr_path, npy_path, bit_16=True):
 # input_dir = args.input
 
 
-input_dir = "rgb20160212_003501_700591.tif"
-ndvi_img_path = "ndvi.png"
+input_dir = "data/rgb20160212_003501_700591.tif"
+ndvi_img_path = "data/ndvi.png"
 
-river1_img_path = "river1_cod.png"
-river1_cod_path = "river1_COD.npy"
-river2_img_path = "river2_cod.png"
-river2_cod_path = "river2_COD.npy"
-large_img_path = "croped_rgb.tif"
+river1_img_path = "data/yunnan/river1_rgb.png"
+river1_cod_path = "data/yunnan/river1_COD.npy"
+river2_img_path = "data/yunnan/river2_RGB.png"
+river2_cod_path = "data/yunnan/river2_COD.npy"
+large_img_path = "data/nantong/river1_rgb.png"
 
 
 ndvi_file = read_tiff(ndvi_img_path)
